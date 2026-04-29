@@ -36,20 +36,19 @@ class BlogViewSet(ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        queryset = Blog.objects.all()
 
-        if user.is_staff:
-            return Blog.objects.all()
-        
-        return Blog.objects.all()
+
+        my_post = self.request.query_params.get('my_post')
+
+        if my_post == 'true' and user.is_authenticated:
+            queryset = queryset.filter(user=user)
+
+        return queryset
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
     
-    @action(detail=False, methods=['get'], url_path='my-post')
-    def my_post(self, request):
-        queryset = Blog.objects.filter(user=request.user)
-        serializer = self.get_serializer(queryset , many=True)
-        return Response(serializer.data)
     
     @action(detail=True, methods=['post'], url_path='toggle-like')
     def toggle_like(self,request, pk=None):
@@ -70,10 +69,6 @@ class CommentViewSet(ModelViewSet):
 
     def get_queryset(self):
         queryset = Comment.objects.all()
-        user = self.request.user
-    
-        if user.is_staff:
-            return Comment.objects.all() 
 
         blog_id = self.request.query_params.get('blog')
 

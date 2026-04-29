@@ -6,8 +6,15 @@ from django.conf import settings
 
 
 class User(AbstractUser):
+    class Role(models.TextChoices):
+        ADMIN = 'ADMIN', 'Admin'
+        AUTHOR = 'AUTHOR', 'Author'
+        USER = 'USER', 'User'
+
+
     email = models.EmailField(unique=True)
     username = models.CharField(unique=True,max_length=150)
+    role = models.CharField(max_length=10, choices=Role.choices, default=Role.USER)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']

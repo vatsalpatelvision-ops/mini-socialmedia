@@ -6,7 +6,7 @@ class IsOwnerOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True
         
-        if request.user.is_staff:
+        if request.user.role == 'ADMIN':
             return True
         
         return obj.user == request.user
