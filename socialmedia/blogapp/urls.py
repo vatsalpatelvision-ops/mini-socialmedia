@@ -12,6 +12,8 @@ urlpatterns = [
     path('register/', views.EmailRegisterView.as_view()),
     path('login/', views.EmailLoginView.as_view()),
     path('roken/refresh/', TokenRefreshView.as_view()),
-
+    path('bloglistview/', views.BlogListView.as_view()),
     path("", include(router.urls)),
+    # path('run/' , views.run_task),
+    path('register-email/' , views.register_user),
 ]

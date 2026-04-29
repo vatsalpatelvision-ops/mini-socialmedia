@@ -6,11 +6,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import RegisterSerializer , CommentSerializer ,LikeSerializer, BlogSerializer
-
+from datetime import datetime
 from rest_framework.viewsets import ModelViewSet
 from .permissions import IsOwnerOrReadOnly
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+
+
+from django.http import JsonResponse
+
+from django.core.cache import cache
+
 
 # Create your views here.
 class EmailRegisterView(APIView):
@@ -27,7 +36,7 @@ class EmailLoginView(TokenObtainPairView):
 
 class BlogViewSet(ModelViewSet):
     serializer_class = BlogSerializer
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated,IsOwnerOrReadOnly]
 
     def get_permissions(self):
         if self.action == 'toggle_like':
@@ -41,7 +50,7 @@ class BlogViewSet(ModelViewSet):
 
         my_post = self.request.query_params.get('my_post')
 
-        if my_post == 'true' and user.is_authenticated:
+        if my_post == 'true':
             queryset = queryset.filter(user=user)
 
         return queryset
@@ -79,4 +88,38 @@ class CommentViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+class BlogListView(APIView):
+
+    @method_decorator(cache_page(60 * 5))  # cache for 5 minutes
+    def get(self, request):
+        data = {
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "data": [
+                {"id": 1, "title": "Post 1"},
+                {"id": 2, "title": "Post 2"},
+            ]
+        }
+        return Response(data)
+    
+
+def blog_list(request):
+    data = cache.get("blog_list")
+
+    if not data:
+        print("From db")
+        data = ["blog1" , "blog2", "blog3"]
+        cache.set("blog_list",data,timeout=60)
+
+    return JsonResponse({"data": data})
+
+
+from django.http import JsonResponse
+from .tasks import send_email_welcome
+
+def register_user(request):
+    user_email = "test@gmail.com"  
+    send_email_welcome.delay(user_email)
+
+    return JsonResponse({"message": "User registered successfully"})
 

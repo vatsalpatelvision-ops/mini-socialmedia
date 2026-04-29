@@ -56,6 +56,20 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+CACHE_TTL = 60 * 5  # 5 minutes
+
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",  # DB 1 in Redis
+    }
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
