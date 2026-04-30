@@ -179,14 +179,13 @@ class CacheBlogViewSet(ModelViewSet):
     def perform_update(self, serializer):
         blog_id = self.kwargs['pk']
         super().perform_update(serializer)
-        clear_blog_cache.delay()
         clear_blog_cache.delay(blog_id)
 
     def perform_destroy(self, instance):
-        blog_id = self.kwargs['pk']
+        blog_id = instance.id
+        print(blog_id)
 
         super().perform_destroy(instance)
-        clear_blog_cache.delay()
         clear_blog_cache.delay(blog_id)
 
 
@@ -199,11 +198,9 @@ class CacheBlogViewSet(ModelViewSet):
         if not created:
             like.delete()
             clear_blog_cache.delay(pk)
-            clear_blog_cache.delay()
 
             return Response ({'status' : 'unliked'})
         
         clear_blog_cache.delay(pk)
-        clear_blog_cache.delay()    
 
         return Response({'status':'liked'})
