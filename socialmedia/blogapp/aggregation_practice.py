@@ -1,15 +1,10 @@
 from django.db.models import (
     Count,
-    Sum,
-    Avg,
     Max,
-    Min,
     F,
     Q,
     Subquery,
     OuterRef,
-    Exists,
-    Prefetch,
 )
 from .models import User, Blog, Comment, Like, Notifications
 

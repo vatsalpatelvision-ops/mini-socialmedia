@@ -1,5 +1,4 @@
-from django.db.models import Count, Avg, Max, Min
-from django.shortcuts import render
+from django.db.models import Count, Max, Min
 from .models import User, Blog, Comment, Like
 from .jwt_serializer import CustomTokenSerializer
 from rest_framework.views import APIView
@@ -121,17 +120,6 @@ def blog_list(request):
     return JsonResponse({"data": data})
 
 
-from django.http import JsonResponse
-from .tasks import send_email_welcome
-
-
-def register_user(request):
-    user_email = "test@gmail.com"
-    send_email_welcome.delay(user_email)
-
-    return JsonResponse({"message": "User registered successfully"})
-
-
 class CacheBlogViewSet(ModelViewSet):
     serializer_class = BlogSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
@@ -222,7 +210,7 @@ class PracticeAggregationsView(APIView):
         earliest_blog = Blog.objects.aggregate(earliest=Min("publish_date"))
 
         # comments_per_blog
-        comments_per_blog = Blog.objects.annotate(
+        comments_per_blog = Blog.objects.annotate(  # noqa: F841
             comment_count=Count("comments__id")
         ).values("title", "comment_count")
 

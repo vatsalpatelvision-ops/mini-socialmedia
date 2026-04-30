@@ -16,6 +16,6 @@ urlpatterns = [
     path("bloglistview/", views.BlogListView.as_view()),
     path("", include(router.urls)),
     # path('run/' , views.run_task),
-    path("register-email/", views.register_user),
+    # path("register-email/", views.register_user),
     path("practice/", views.PracticeAggregationsView.as_view()),
 ]
