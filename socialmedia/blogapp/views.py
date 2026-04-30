@@ -123,3 +123,88 @@ def register_user(request):
 
     return JsonResponse({"message": "User registered successfully"})
 
+
+
+
+class CacheBlogViewSet(ModelViewSet):
+    serializer_class = BlogSerializer
+    permission_classes = [IsAuthenticated,IsOwnerOrReadOnly]
+
+    def get_permissions(self):
+        if self.action == 'toggle_like':
+            return [IsAuthenticated()]
+        return [IsOwnerOrReadOnly()]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Blog.objects.all()
+
+
+        my_post = self.request.query_params.get('my_post')
+
+        if my_post == 'true':
+            queryset = queryset.filter(user=user)
+
+        return queryset
+    
+    def _clear_cache(self):
+        cache.delete('cached_blog_list')
+
+
+    def list(self, request, *args, **kwargs):
+        cache_key = 'cached_blog_list'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        
+        res =  super().list(request, *args, **kwargs)
+        cache.set(cache_key, res.data, timeout=60 * 2)
+
+        print(datetime.now().strftime("%H:%M:%S"))
+        return res
+
+    
+    def retrieve(self, request, *args, **kwargs):
+        blog_id = kwargs.get('pk')
+        cache_key = f'cached_blog_detail_{blog_id}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        
+        res = super().retrieve(request, *args, **kwargs)
+        cache.set(cache_key, res.data, timeout=60 * 5)
+        return res
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+        self._clear_cache()
+
+    def perform_update(self, serializer):
+        blog_id = self.kwargs['pk']
+        super().perform_update(serializer)
+        self._clear_cache()
+        cache.delete(f'cached_blog_detail_{blog_id}')
+
+    def perform_destroy(self, instance):
+        blog_id = self.kwargs['pk']
+
+        super().perform_destroy(instance)
+        self._clear_cache()
+        cache.delete(f'cahced_blog_detail_{blog_id}')
+
+
+    @action(detail=True, methods=['post'], url_path='toggle-like')
+    def toggle_like(self,request, pk=None):
+        blog = self.get_object()
+        user = request.user
+        print(pk)
+        like , created = Like.objects.get_or_create(user = user, blog = blog)
+        if not created:
+            like.delete()
+            cache.delete(f'cached_blog_detail_{pk}')
+            self._clear_cache()
+            return Response ({'status' : 'unliked'})
+        cache.delete(f'cached_blog_detail_{pk}')
+        self._clear_cache()    
+
+        return Response({'status':'liked'})

@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 router = DefaultRouter()
 router.register("blog",views.BlogViewSet , basename='blog')
 router.register("comment",views.CommentViewSet , basename='comment')
+router.register("cacheblog", views.CacheBlogViewSet, basename='cacheblog')
 
 urlpatterns = [
     path('register/', views.EmailRegisterView.as_view()),
