@@ -1,3 +1,4 @@
+from django.db.models import Count, Avg, Max, Min
 from django.shortcuts import render
 from .models import User,Blog,Comment,Like
 from .jwt_serializer import CustomTokenSerializer
@@ -204,3 +205,27 @@ class CacheBlogViewSet(ModelViewSet):
         clear_blog_cache.delay(pk)
 
         return Response({'status':'liked'})
+
+
+class PracticeAggregationsView(APIView):
+    def get(self, request):
+        total_blogs = Blog.objects.aggregate(total=Count('id'))
+
+        total_comments = Comment.objects.aggregate(total=Count('id'))
+
+        latest_blog = Blog.objects.aggregate(latest=Max('publish_date'))
+
+        earliest_blog = Blog.objects.aggregate(earliest=Min('publish_date'))
+        
+
+        #comments_per_blog 
+        comments_per_blog = Blog.objects.annotate(comment_count=Count('comments__id')).values('title', 'comment_count')
+
+
+        return Response({
+            '1_count_total_blogs': total_blogs,
+            '2_count_total_comments': total_comments,
+            '3_max_latest_blog': latest_blog,
+            '4_min_earliest_blog': earliest_blog,
+            '5_comments_per_blog': comments_per_blog,            
+        })
