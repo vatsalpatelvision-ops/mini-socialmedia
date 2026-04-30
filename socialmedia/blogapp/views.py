@@ -15,11 +15,10 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 
-
 from django.http import JsonResponse
 
 from django.core.cache import cache
-
+from .tasks import clear_blog_cache
 
 # Create your views here.
 class EmailRegisterView(APIView):
@@ -124,8 +123,6 @@ def register_user(request):
     return JsonResponse({"message": "User registered successfully"})
 
 
-
-
 class CacheBlogViewSet(ModelViewSet):
     serializer_class = BlogSerializer
     permission_classes = [IsAuthenticated,IsOwnerOrReadOnly]
@@ -177,20 +174,20 @@ class CacheBlogViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-        self._clear_cache()
+        clear_blog_cache.delay()
 
     def perform_update(self, serializer):
         blog_id = self.kwargs['pk']
         super().perform_update(serializer)
-        self._clear_cache()
-        cache.delete(f'cached_blog_detail_{blog_id}')
+        clear_blog_cache.delay()
+        clear_blog_cache.delay(blog_id)
 
     def perform_destroy(self, instance):
         blog_id = self.kwargs['pk']
 
         super().perform_destroy(instance)
-        self._clear_cache()
-        cache.delete(f'cahced_blog_detail_{blog_id}')
+        clear_blog_cache.delay()
+        clear_blog_cache.delay(blog_id)
 
 
     @action(detail=True, methods=['post'], url_path='toggle-like')
@@ -201,10 +198,12 @@ class CacheBlogViewSet(ModelViewSet):
         like , created = Like.objects.get_or_create(user = user, blog = blog)
         if not created:
             like.delete()
-            cache.delete(f'cached_blog_detail_{pk}')
-            self._clear_cache()
+            clear_blog_cache.delay(pk)
+            clear_blog_cache.delay()
+
             return Response ({'status' : 'unliked'})
-        cache.delete(f'cached_blog_detail_{pk}')
-        self._clear_cache()    
+        
+        clear_blog_cache.delay(pk)
+        clear_blog_cache.delay()    
 
         return Response({'status':'liked'})
