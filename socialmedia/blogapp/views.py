@@ -38,8 +38,9 @@ from django.core.mail import send_mail
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 # Create your views here.
 
+
 class LoginThrottle(AnonRateThrottle):
-    rate = '5/minute'
+    rate = "5/minute"
 
 
 class EmailRegisterView(APIView):
@@ -253,12 +254,14 @@ class PracticeAggregationsView(APIView):
             }
         )
 
+
 class PasswordResetThrottle(UserRateThrottle):
-    rate = '3/hour'
+    rate = "3/hour"
 
 
 class PasswordResetRequestView(APIView):
     throttle_classes = [PasswordResetThrottle]
+
     def post(self, request):
 
         serializer = PasswordResetRequestSerializer(data=request.data)

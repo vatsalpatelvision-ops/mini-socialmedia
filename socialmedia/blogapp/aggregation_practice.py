@@ -139,13 +139,14 @@ def exercise_17_blog_latest_comment_content():
 
 
 def exercise_18_blogs_with_author():
-    blogs = Blog.objects.select_related('user').all()
+    blogs = Blog.objects.select_related("user").all()
     for blog in blogs:
         print(f"Blog: '{blog.title}' | Author: {blog.user.email}")
     return blogs
 
+
 def exercise_20_blogs_with_comments():
-    blogs = Blog.objects.prefetch_related('comments').all()
+    blogs = Blog.objects.prefetch_related("comments").all()
     for blog in blogs:
         print(f"Blog: '{blog.title}' ({blog.comments.count()} comments)")
     return blogs
