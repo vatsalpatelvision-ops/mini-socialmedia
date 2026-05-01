@@ -18,4 +18,7 @@ urlpatterns = [
     # path('run/' , views.run_task),
     # path("register-email/", views.register_user),
     path("practice/", views.PracticeAggregationsView.as_view()),
+
+    path("password-reset/", views.PasswordResetRequestView.as_view()),
+    path("password-reset-confirm/", views.PasswordResetConfirmView.as_view()),
 ]

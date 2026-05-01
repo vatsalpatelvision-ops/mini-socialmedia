@@ -10,6 +10,8 @@ from .serializers import (
     CommentSerializer,
     LikeSerializer,
     BlogSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
 )
 from datetime import datetime
 from rest_framework.viewsets import ModelViewSet
@@ -25,8 +27,21 @@ from django.http import JsonResponse
 from django.core.cache import cache
 from .tasks import clear_blog_cache
 
+# email setup
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
 
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 # Create your views here.
+
+class LoginThrottle(AnonRateThrottle):
+    rate = '5/minute'
+
+
 class EmailRegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -39,6 +54,7 @@ class EmailRegisterView(APIView):
 
 class EmailLoginView(TokenObtainPairView):
     serializer_class = CustomTokenSerializer
+    throttle_classes = [LoginThrottle]
 
 
 class BlogViewSet(ModelViewSet):
@@ -235,4 +251,65 @@ class PracticeAggregationsView(APIView):
                 "7_blog_recent": recent_serializer.data,
                 "8_blog_by_user": user_blog_serializer.data,
             }
+        )
+
+class PasswordResetThrottle(UserRateThrottle):
+    rate = '3/hour'
+
+
+class PasswordResetRequestView(APIView):
+    throttle_classes = [PasswordResetThrottle]
+    def post(self, request):
+
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {
+                    "message": "Account does not exists",
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        email_body = (
+            f"Password Reset Request\n\n"
+            f"Use the following details to reset your password:\n\n"
+            f"uidb64: {uidb64}\n"
+            f"token: {token}\n\n"
+            f"Send these values to the password-reset-confirm endpoint with your new password.\n"
+            f"This token will expire in 3 days."
+        )
+
+        send_mail(
+            subject="Password Reset Request",
+            message=email_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        return Response(
+            {"message": "A reset link has been sent"},
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            {"message": "Password reset successful"},
+            status=status.HTTP_200_OK,
         )
